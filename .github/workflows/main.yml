@@ -1,13 +1,13 @@
 name: EC2 auto deploy
 on:
-push:
-branches: - main
-workflow_dispatch:
+  push:
+    branches: - main
+  workflow_dispatch:
 
 jobs:
-deploy:
-runs-on: ubuntu-latest
-steps:
+  deploy:
+  runs-on: ubuntu-latest
+  steps:
 
       # BranchをCheckout
       - name: Checkout code
@@ -37,14 +37,8 @@ steps:
       # デプロイする
       - name: Deploy
         run: |
-
-          # SSHのセキュリティグループを開放する
           aws ec2 authorize-security-group-ingress --group-id ${{ secrets.EC2_SECURITY_GROUP_ID }} --protocol tcp --port 22 --cidr ${{ steps.ip.outputs.ipv4 }}/32
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > private_key
           chmod 600 private_key
-
-          # SSH接続して、git pullとgit buildする
           ssh -oStrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} -i private_key "cd /home/ec2-user/aws-ec2 && git fetch --prune && git checkout main && git pull origin main && npm install && npm run build"
-
-          # SSHのセキュリティグループを閉じる
           aws ec2 revoke-security-group-ingress --group-id ${{ secrets.EC2_SECURITY_GROUP_ID }} --protocol tcp --port 22 --cidr ${{ steps.ip.outputs.ipv4 }}/32
